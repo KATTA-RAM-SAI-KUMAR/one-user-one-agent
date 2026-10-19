@@ -1,0 +1,793 @@
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from src.state_store import ViewerStateStore
+
+
+UTC = timezone.utc
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def read_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+
+    if not path.exists():
+        return records
+
+    with path.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            line = line.strip()
+            if not line:
+                continue
+
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Invalid JSON in {path}, line {line_number}: {exc}"
+                ) from exc
+
+            if isinstance(record, dict):
+                records.append(record)
+
+    return records
+
+
+def read_csv(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as file:
+        return list(csv.DictReader(file))
+
+
+def write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(value, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("w", encoding="utf-8") as file:
+        for record in records:
+            file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def parse_time(value: Any) -> datetime | None:
+    if not value:
+        return None
+
+    try:
+        result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if result.tzinfo is None:
+            result = result.replace(tzinfo=UTC)
+        return result.astimezone(UTC)
+    except (ValueError, TypeError):
+        return None
+
+
+def timestamp(value: datetime) -> str:
+    return value.astimezone(UTC).isoformat(timespec="milliseconds").replace(
+        "+00:00", "Z"
+    )
+
+
+def ist_day(value: datetime) -> str:
+    return value.astimezone(IST).date().isoformat()
+
+
+def load_profiles(path: Path) -> dict[str, dict[str, Any]]:
+    """
+    Resolve duplicate profile rows deterministically using updated_at,
+    then snapshot_at. The newest available row wins.
+    """
+    rows = read_csv(path)
+    selected: dict[str, dict[str, Any]] = {}
+
+    for row in rows:
+        user_id = row.get("user_id", "").strip()
+        if not user_id:
+            continue
+
+        current = selected.get(user_id)
+
+        row_time = (
+            parse_time(row.get("updated_at"))
+            or parse_time(row.get("snapshot_at"))
+            or datetime.min.replace(tzinfo=UTC)
+        )
+
+        current_time = (
+            parse_time(current.get("updated_at"))
+            or parse_time(current.get("snapshot_at"))
+            or datetime.min.replace(tzinfo=UTC)
+            if current
+            else datetime.min.replace(tzinfo=UTC)
+        )
+
+        if current is None or row_time >= current_time:
+            selected[user_id] = row
+
+    return selected
+
+
+def load_arms(path: Path) -> dict[str, str]:
+    result: dict[str, str] = {}
+
+    for row in read_csv(path):
+        user_id = row.get("user_id", "").strip()
+        arm = (
+            row.get("arm")
+            or row.get("assigned_arm")
+            or row.get("experiment_arm")
+            or ""
+        ).strip().lower()
+
+        if user_id and arm:
+            result[user_id] = arm
+
+    return result
+
+
+def load_catalogue(path: Path) -> list[dict[str, Any]]:
+    rows = read_csv(path)
+
+    for row in rows:
+        row["is_premium"] = str(row.get("is_premium", "")).lower() == "true"
+
+    return rows
+
+
+def load_goals(path: Path) -> list[dict[str, Any]]:
+    raw = read_json(path)
+
+    if isinstance(raw, list):
+        goals = raw
+    elif isinstance(raw, dict):
+        goals = raw.get("goals", [])
+    else:
+        goals = []
+
+    return [goal for goal in goals if isinstance(goal, dict)]
+
+
+def event_time(event: dict[str, Any]) -> datetime | None:
+    # Server receive time is the trusted event timestamp.
+    return (
+        parse_time(event.get("received_at"))
+        or parse_time(event.get("deliver_at"))
+        or parse_time(event.get("at"))
+        or parse_time(event.get("occurred_at"))
+        or parse_time(event.get("sent_at"))
+    )
+
+
+def event_sort_key(event: dict[str, Any]) -> tuple[datetime, str]:
+    moment = event_time(event) or datetime.min.replace(tzinfo=UTC)
+    return moment, str(event.get("event_id", ""))
+
+
+def load_timeline(pack: Path) -> list[dict[str, Any]]:
+    """
+    Merge replay triggers, live events and operational controls.
+    Duplicate event IDs are processed only once.
+    """
+    replay_dir = pack / "replay"
+
+    triggers = read_jsonl(replay_dir / "triggers.jsonl")
+    live_events = read_jsonl(replay_dir / "live_events.jsonl")
+    controls = read_jsonl(replay_dir / "control_events.jsonl")
+
+    timeline: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    for event in triggers:
+        event["_timeline_kind"] = "trigger"
+        event["_timeline_time"] = event_time(event)
+        timeline.append(event)
+
+    for event in live_events:
+        event["_timeline_kind"] = "live"
+        event["_timeline_time"] = event_time(event)
+        timeline.append(event)
+
+    for control in controls:
+        control["_timeline_kind"] = "control"
+        control["_timeline_time"] = parse_time(control.get("at"))
+        timeline.append(control)
+
+    timeline.sort(
+        key=lambda event: (
+            event.get("_timeline_time")
+            or datetime.min.replace(tzinfo=UTC),
+            0 if event.get("_timeline_kind") == "control" else 1,
+            str(event.get("event_id", "")),
+        )
+    )
+
+    deduplicated: list[dict[str, Any]] = []
+
+    for event in timeline:
+        event_id = event.get("event_id")
+
+        if event_id:
+            event_id = str(event_id)
+            if event_id in seen_ids:
+                continue
+            seen_ids.add(event_id)
+
+        deduplicated.append(event)
+
+    return deduplicated
+
+
+def success_rule(goal: dict[str, Any]) -> dict[str, Any]:
+    success = goal.get("success", {})
+    return success if isinstance(success, dict) else {}
+
+
+def goal_id(goal: dict[str, Any]) -> str:
+    return str(goal.get("goal_id") or goal.get("id") or "")
+
+
+def goal_window_hours(goal: dict[str, Any]) -> float | None:
+    success = success_rule(goal)
+
+    for container in (goal, success):
+        for key in ("window_hours", "success_window_hours"):
+            value = container.get(key)
+            if value is not None:
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    pass
+
+        for key in ("window_days", "success_window_days"):
+            value = container.get(key)
+            if value is not None:
+                try:
+                    return float(value) * 24
+                except (TypeError, ValueError):
+                    pass
+
+    return None
+
+
+def goal_eligibility(
+    goal: dict[str, Any],
+    profile: dict[str, Any],
+    history: list[dict[str, Any]],
+    now: datetime,
+    active_goal: dict[str, Any] | None,
+) -> tuple[bool, list[str]]:
+    """
+    Conservative, evidence-based eligibility checks.
+
+    Goals without a measurable success event or time window are excluded.
+    G10 is excluded because the assignment defines its success event as null.
+    """
+    identifier = goal_id(goal)
+    evidence: list[str] = []
+
+    if not identifier:
+        return False, ["missing_goal_id"]
+
+    if identifier == "G10":
+        return False, ["goal_excluded_null_success_event"]
+
+    success = success_rule(goal)
+    success_event = success.get("event")
+
+    if not success_event or str(success_event).lower() in {"null", "none"}:
+        return False, ["missing_measurable_success_event"]
+
+    window_hours = goal_window_hours(goal)
+    if window_hours is None or window_hours <= 0:
+        return False, ["missing_or_invalid_success_window"]
+
+    if active_goal and goal_id(active_goal) == identifier:
+        return False, ["goal_already_open"]
+
+    # A goal must have a usable eligibility definition.
+    eligibility = goal.get("eligibility", {})
+    if isinstance(eligibility, dict):
+        required_statuses = (
+            eligibility.get("subscription_status")
+            or eligibility.get("subscription_status_in")
+        )
+
+        if isinstance(required_statuses, str):
+            required_statuses = [required_statuses]
+
+        if required_statuses:
+            status = str(profile.get("subscription_status", "")).strip().lower()
+            allowed = {str(item).strip().lower() for item in required_statuses}
+
+            if status not in allowed:
+                return False, ["subscription_status_not_eligible"]
+
+            evidence.append(f"subscription_status:{status}")
+
+        required_event = eligibility.get("event")
+        if required_event:
+            matching_events = [
+                event
+                for event in history
+                if event.get("event") == required_event
+            ]
+
+            if not matching_events:
+                return False, [f"required_event_missing:{required_event}"]
+
+            evidence.append(f"required_event:{required_event}")
+
+    evidence.append(f"measurable_success_event:{success_event}")
+    evidence.append(f"success_window_hours:{window_hours:g}")
+
+    return True, evidence
+
+
+def choose_goal(
+    goals: list[dict[str, Any]],
+    profile: dict[str, Any],
+    history: list[dict[str, Any]],
+    now: datetime,
+    active_goal: dict[str, Any] | None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """
+    Return the first eligible goal in configuration order.
+    No model-generated claims are used as eligibility evidence.
+    """
+    for goal in goals:
+        eligible, evidence = goal_eligibility(
+            goal=goal,
+            profile=profile,
+            history=history,
+            now=now,
+            active_goal=active_goal,
+        )
+
+        if eligible:
+            return goal, evidence
+
+    return None, ["no_eligible_measurable_goal"]
+
+
+def available_titles(
+    catalogue: list[dict[str, Any]],
+    dialect: str,
+    now: datetime,
+    withdrawn_titles: set[str],
+) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+
+    for title in catalogue:
+        title_id = str(title.get("title_id", "")).strip()
+        title_dialect = str(title.get("dialect", "")).strip()
+
+        if not title_id or title_id in withdrawn_titles:
+            continue
+
+        if title_dialect != dialect:
+            continue
+
+        available_from = parse_time(title.get("available_from"))
+        available_until = parse_time(title.get("available_until"))
+
+        if available_from and now < available_from:
+            continue
+
+        if available_until and now > available_until:
+            continue
+
+        matches.append(title)
+
+    return matches
+
+
+def build_home_page_action(
+    action_number: int,
+    decision_id: str,
+    user_id: str,
+    trigger: dict[str, Any],
+    published_at: datetime,
+    catalogue: list[dict[str, Any]],
+    withdrawn_titles: set[str],
+) -> dict[str, Any] | None:
+    dialect = str(trigger.get("app_dialect") or "").strip()
+
+    if not dialect:
+        return None
+
+    titles = available_titles(
+        catalogue=catalogue,
+        dialect=dialect,
+        now=published_at,
+        withdrawn_titles=withdrawn_titles,
+    )
+
+    if not titles:
+        return None
+
+    # Stable ordering makes replay output deterministic.
+    titles.sort(key=lambda title: str(title.get("title_id", "")))
+
+    title_ids = [str(title["title_id"]) for title in titles]
+    hero_title_id = title_ids[0]
+
+    return {
+        "action_id": f"A-{action_number:04d}",
+        "decision_id": decision_id,
+        "user_id": user_id,
+        "trigger_event_id": str(trigger.get("event_id", "")),
+        "type": "home_page",
+        "published_at": timestamp(published_at),
+        "dialect": dialect,
+        "hero_title_id": hero_title_id,
+        "rows": [
+            {
+                "row_type": "popular_in_dialect",
+                "title_ids": title_ids[:10],
+            }
+        ],
+    }
+
+
+def run_replay(pack: Path, out: Path) -> dict[str, Any]:
+    started = time.perf_counter()
+
+    data_dir = pack / "data"
+    config_dir = pack / "config"
+    replay_dir = pack / "replay"
+
+    profiles = load_profiles(data_dir / "profiles_snapshot.csv")
+    arms = load_arms(replay_dir / "arms.csv")
+    catalogue = load_catalogue(data_dir / "catalogue.csv")
+    goals = load_goals(config_dir / "goals.json")
+    timeline = load_timeline(pack)
+
+    decisions: list[dict[str, Any]] = []
+    actions: list[dict[str, Any]] = []
+
+    history: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    active_goals: dict[str, dict[str, Any]] = {}
+    opt_outs: dict[str, set[str]] = defaultdict(set)
+    withdrawn_titles: set[str] = set()
+
+    decision_number = 0
+    action_number = 0
+    trigger_count = 0
+    holdout_decisions = 0
+    abstentions = 0
+    goal_rule_corrections = 0
+    missing_profiles = 0
+    unknown_arms = 0
+
+    for event in timeline:
+        kind = event.get("_timeline_kind")
+        now = (
+            event.get("_timeline_time")
+            or datetime.min.replace(tzinfo=UTC)
+        )
+
+        if kind == "control":
+            control_type = event.get("type")
+
+            if control_type == "title_withdrawn":
+                title_id = event.get("title_id")
+                if title_id:
+                    withdrawn_titles.add(str(title_id))
+
+            elif control_type == "goal_rule_corrected":
+                goal_rule_corrections += 1
+                corrected_goal_id = str(event.get("goal_id", ""))
+
+                new_success = event.get("new_success")
+                if isinstance(new_success, dict):
+                    for goal in goals:
+                        if goal_id(goal) == corrected_goal_id:
+                            goal["success"] = dict(new_success)
+
+                    # Update any still-open goal for every user, including
+                    # goals opened before the correction arrived.
+                    for user_id, active in list(active_goals.items()):
+                        if goal_id(active) == corrected_goal_id:
+                            active["success"] = dict(new_success)
+
+            # Dependency controls are recorded in the timeline. This baseline
+            # does not call external dependencies, so it safely abstains from
+            # any model-based action.
+            continue
+
+        user_id = str(event.get("user_id", "")).strip()
+        if not user_id:
+            continue
+
+        if kind == "live":
+            event_name = event.get("event")
+
+            if event_name == "notification_opt_out":
+                channel = str(
+                    (event.get("properties") or {}).get("channel", "")
+                ).lower()
+                if channel:
+                    opt_outs[user_id].add(channel)
+
+            history[user_id].append(event)
+            continue
+
+        if kind != "trigger":
+            continue
+
+        trigger_count += 1
+        decision_number += 1
+
+        decision_id = f"D-{decision_number:04d}"
+        arm = arms.get(user_id, "unknown").lower()
+        profile = profiles.get(user_id)
+
+        decision: dict[str, Any] = {
+            "decision_id": decision_id,
+            "user_id": user_id,
+            "trigger_event_id": str(event.get("event_id", "")),
+            "trigger_type": str(event.get("event", "")),
+            "deliver_at": timestamp(now),
+            "arm": arm,
+            "goal": None,
+            "evidence": [],
+            "reason": "",
+            "action_ids": [],
+            "checks": {"passed": [], "failed": []},
+        }
+
+        if profile is None:
+            missing_profiles += 1
+            decision["reason"] = "No profile available; abstained"
+            decision["checks"]["failed"].append("profile_missing")
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            continue
+
+        if arm == "unknown":
+            unknown_arms += 1
+            decision["reason"] = "No experiment arm; abstained safely"
+            decision["checks"]["failed"].append("arm_missing")
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            continue
+
+        # HOLDOUT ISOLATION:
+        # Holdout users may receive a shadow goal for offline measurement,
+        # but never receive an action. This branch must run before any action
+        # creation logic.
+        if arm != "agent":
+            shadow_goal, shadow_evidence = choose_goal(
+                goals=goals,
+                profile=profile,
+                history=history[user_id],
+                now=now,
+                active_goal=active_goals.get(user_id),
+            )
+
+            if shadow_goal:
+                decision["goal"] = goal_id(shadow_goal)
+                decision["evidence"] = [
+                    "shadow_goal_assignment",
+                    *shadow_evidence,
+                ]
+                decision["reason"] = (
+                    "Holdout shadow goal assigned; agent actions prohibited"
+                )
+                # Track the same open-goal lifecycle for shadow evaluation.
+                active_goals[user_id] = dict(shadow_goal)
+            else:
+                decision["reason"] = (
+                    "Holdout; no eligible measurable shadow goal"
+                )
+                decision["evidence"] = shadow_evidence
+
+            decision["checks"]["passed"].append("holdout_isolation")
+            decision["checks"]["passed"].append("no_action_created")
+            decisions.append(decision)
+            holdout_decisions += 1
+            history[user_id].append(event)
+            continue
+
+        # Agent-arm users proceed to measurable goal selection.
+        selected_goal, evidence = choose_goal(
+            goals=goals,
+            profile=profile,
+            history=history[user_id],
+            now=now,
+            active_goal=active_goals.get(user_id),
+        )
+
+        if selected_goal is None:
+            decision["reason"] = "No eligible measurable goal; abstained"
+            decision["evidence"] = evidence
+            decision["checks"]["passed"].append("no_unsupported_claims")
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            continue
+
+        decision["goal"] = goal_id(selected_goal)
+        decision["evidence"] = evidence
+        active_goals[user_id] = dict(selected_goal)
+
+        # Only create an action if a valid dialect and currently available
+        # catalogue content exist. This baseline intentionally uses the
+        # least intrusive home-page action rather than unsolicited messaging.
+        publish_time = time.perf_counter()
+        action = build_home_page_action(
+            action_number=action_number + 1,
+            decision_id=decision_id,
+            user_id=user_id,
+            trigger=event,
+            published_at=now,
+            catalogue=catalogue,
+            withdrawn_titles=withdrawn_titles,
+        )
+        elapsed_seconds = time.perf_counter() - publish_time
+
+        if action is None:
+            decision["reason"] = (
+                "Goal selected, but no valid dialect-specific title; abstained"
+            )
+            decision["checks"]["failed"].append(
+                "no_available_dialect_title"
+            )
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            continue
+
+        # Record processing time in published_at as required by the replay
+        # contract. The elapsed measurement is used, not a fabricated delay.
+        action["published_at"] = timestamp(
+            now + timedelta(seconds=elapsed_seconds)
+        )
+
+        action_number += 1
+        actions.append(action)
+        decision["action_ids"].append(action["action_id"])
+        decision["reason"] = "Eligible measurable goal; home page action created"
+        decision["checks"]["passed"].extend(
+            [
+                "agent_arm",
+                "measurable_goal",
+                "dialect_specific_catalogue",
+                "title_not_withdrawn",
+                "holdout_isolation",
+            ]
+        )
+        decisions.append(decision)
+
+        history[user_id].append(event)
+
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    decision_count = len(decisions)
+
+    report = {
+        "pack": str(pack),
+        "trigger_count": trigger_count,
+        "decisions_total": decision_count,
+        "actions_total": len(actions),
+        "holdout_decisions": holdout_decisions,
+        "abstentions": abstentions,
+        "profile_duplicate_resolution": "latest updated_at, then snapshot_at",
+        "profiles_loaded": len(profiles),
+        "arms_loaded": len(arms),
+        "catalogue_titles_loaded": len(catalogue),
+        "goals_loaded": len(goals),
+        "withdrawn_titles_seen": len(withdrawn_titles),
+        "goal_rule_corrections_seen": goal_rule_corrections,
+        "missing_profiles": missing_profiles,
+        "unknown_arms": unknown_arms,
+        "processing_elapsed_ms": round(elapsed_ms, 3),
+        "average_decision_ms": round(
+            elapsed_ms / decision_count, 4
+        ) if decision_count else 0,
+        "holdout_actions_created": sum(
+            1 for action in actions
+            if arms.get(str(action.get("user_id", "")), "").lower() != "agent"
+        ),
+        "notes": [
+            "Holdout shadow goals are evaluation metadata, not actions.",
+            "No push or WhatsApp messages are generated by this baseline.",
+            "Goal eligibility uses only configured rules and observed evidence.",
+            "The simulator remains the source of truth for action acceptance.",
+        ],
+    }
+
+    out.mkdir(parents=True, exist_ok=True)
+    write_jsonl(out / "actions.jsonl", actions)
+    write_jsonl(out / "decisions.jsonl", decisions)
+    write_json(out / "replay_report.json", report)
+
+    # Persist replay-derived per-viewer state atomically.
+    state_dir = out / "viewer_state"
+    if state_dir.exists():
+        for old_state in state_dir.glob("*.json"):
+            if old_state.name != "index.json":
+                old_state.unlink()
+
+    state_store = ViewerStateStore(state_dir)
+    for decision in decisions:
+        user_id = str(decision.get("user_id", ""))
+        if not user_id:
+            continue
+
+        state = state_store.record_decision(user_id, decision)
+        state["latest_deliver_at"] = decision.get("deliver_at")
+        state["source"] = "decisions.jsonl"
+        state["state_type"] = "replay_derived_persisted_state"
+        state_store.upsert(user_id, state)
+
+    viewer_files = sorted(
+        file.name for file in state_dir.glob("*.json")
+        if file.name != "index.json"
+    )
+    write_json(
+        state_dir / "index.json",
+        {
+            "viewer_count": len(viewer_files),
+            "decision_count": len(decisions),
+            "action_count": len(actions),
+            "state_type": "replay_derived_persisted_state",
+            "files": viewer_files,
+        },
+    )
+
+    return report
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Replay the One User, One Agent assignment."
+    )
+    parser.add_argument(
+        "--pack",
+        default="one_user_one_agent_pack",
+        help="Path to the assignment data pack",
+    )
+    parser.add_argument(
+        "--out",
+        default="sample_run",
+        help="Directory where replay outputs are written",
+    )
+    args = parser.parse_args()
+
+    pack = Path(args.pack)
+    out = Path(args.out)
+
+    if not pack.exists():
+        raise SystemExit(f"Data pack not found: {pack}")
+
+    report = run_replay(pack, out)
+
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    print(f"\nActions:   {out / 'actions.jsonl'}")
+    print(f"Decisions: {out / 'decisions.jsonl'}")
+    print(f"Report:    {out / 'replay_report.json'}")
+
+
+if __name__ == "__main__":
+    main()

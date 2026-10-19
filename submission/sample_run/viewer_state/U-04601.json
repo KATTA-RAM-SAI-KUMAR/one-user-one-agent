@@ -1,0 +1,19 @@
+{
+  "user_id": "U-04601",
+  "decision_count": 2,
+  "action_ids": [],
+  "evidence_references": [],
+  "processed_trigger_ids": [
+    "e085c45d-8b5b-4940-9c5d-c987ed0dd3cf",
+    "b667d589-3214-4e1a-be00-d7d988e6bc81"
+  ],
+  "latest_decision_id": "D-0820",
+  "latest_trigger_event_id": "b667d589-3214-4e1a-be00-d7d988e6bc81",
+  "latest_trigger_type": "app_open",
+  "latest_reason": "No profile available; abstained",
+  "arm": "agent",
+  "active_goal": null,
+  "latest_deliver_at": "2026-10-01T06:51:58.662Z",
+  "source": "decisions.jsonl",
+  "state_type": "replay_derived_persisted_state"
+}

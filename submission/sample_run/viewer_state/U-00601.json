@@ -1,0 +1,22 @@
+{
+  "user_id": "U-00601",
+  "decision_count": 1,
+  "action_ids": [],
+  "evidence_references": [
+    "shadow_goal_assignment",
+    "measurable_success_event:play_started",
+    "success_window_hours:24"
+  ],
+  "processed_trigger_ids": [
+    "0958906f-9e76-454f-ba78-d6f76687c606"
+  ],
+  "latest_decision_id": "D-1064",
+  "latest_trigger_event_id": "0958906f-9e76-454f-ba78-d6f76687c606",
+  "latest_trigger_type": "app_open",
+  "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
+  "arm": "holdout",
+  "active_goal": null,
+  "latest_deliver_at": "2026-10-01T08:41:31.876Z",
+  "source": "decisions.jsonl",
+  "state_type": "replay_derived_persisted_state"
+}

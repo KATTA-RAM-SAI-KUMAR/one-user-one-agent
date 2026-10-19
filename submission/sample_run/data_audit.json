@@ -1,0 +1,179 @@
+{
+  "pack_root": "one_user_one_agent_pack",
+  "jsonl": [
+    {
+      "file": "one_user_one_agent_pack\\data\\events.jsonl",
+      "rows": 142906,
+      "unique_users": 4759,
+      "duplicate_event_id_occurrences": 2176,
+      "malformed_json_lines": 0,
+      "event_types": {
+        "app_open": 38051,
+        "home_viewed": 32324,
+        "play_started": 13809,
+        "play_progress": 27065,
+        "title_viewed": 16270,
+        "episode_completed": 6598,
+        "login_success": 2585,
+        "signup_completed": 780,
+        "search": 2925,
+        "paywall_viewed": 485,
+        "purchase_completed": 240,
+        "notification_opt_out": 21,
+        "subscription_renewed": 890,
+        "subscription_lapsed": 240,
+        "message_delivered": 409,
+        "app_dialect_changed": 209,
+        "message_clicked": 5
+      }
+    },
+    {
+      "file": "one_user_one_agent_pack\\replay\\triggers.jsonl",
+      "rows": 2769,
+      "unique_users": 1746,
+      "duplicate_event_id_occurrences": 90,
+      "malformed_json_lines": 0,
+      "event_types": {
+        "app_open": 2558,
+        "login_success": 211
+      }
+    },
+    {
+      "file": "one_user_one_agent_pack\\replay\\live_events.jsonl",
+      "rows": 607,
+      "unique_users": 245,
+      "duplicate_event_id_occurrences": 7,
+      "malformed_json_lines": 0,
+      "event_types": {
+        "home_viewed": 100,
+        "episode_completed": 29,
+        "paywall_viewed": 4,
+        "title_viewed": 55,
+        "play_progress": 105,
+        "app_open": 118,
+        "play_started": 44,
+        "purchase_completed": 38,
+        "search": 10,
+        "signup_completed": 94,
+        "login_success": 10
+      }
+    },
+    {
+      "file": "one_user_one_agent_pack\\replay\\control_events.jsonl",
+      "rows": 4,
+      "unique_users": 0,
+      "duplicate_event_id_occurrences": 0,
+      "malformed_json_lines": 0,
+      "event_types": {
+        "title_withdrawn": 1,
+        "goal_rule_corrected": 1,
+        "dependency_unavailable": 1,
+        "dependency_degraded": 1
+      }
+    },
+    {
+      "file": "one_user_one_agent_pack\\replay\\model_faults.jsonl",
+      "rows": 5,
+      "unique_users": 5,
+      "duplicate_event_id_occurrences": 0,
+      "malformed_json_lines": 0,
+      "event_types": {
+        "unknown": 5
+      }
+    }
+  ],
+  "csv": [
+    {
+      "file": "one_user_one_agent_pack\\data\\profiles_snapshot.csv",
+      "rows": 4888,
+      "columns": [
+        "user_id",
+        "signup_at",
+        "subscription_status",
+        "plan_started_at",
+        "plan_ends_at",
+        "preferred_dialect",
+        "preferred_language",
+        "notifications_opt_in",
+        "whatsapp_opt_in",
+        "platform",
+        "updated_at",
+        "snapshot_at"
+      ],
+      "duplicate_key_values": 30,
+      "max_rows_per_key": 2
+    },
+    {
+      "file": "one_user_one_agent_pack\\data\\catalogue.csv",
+      "rows": 2014,
+      "columns": [
+        "title_id",
+        "content_slug",
+        "title",
+        "dialect",
+        "language",
+        "content_type",
+        "genres",
+        "release_date",
+        "available_from",
+        "available_until",
+        "is_premium",
+        "description"
+      ],
+      "duplicate_key_values": 0,
+      "max_rows_per_key": 1
+    },
+    {
+      "file": "one_user_one_agent_pack\\data\\episodes.csv",
+      "rows": 26986,
+      "columns": [
+        "episode_id",
+        "content_slug",
+        "season",
+        "episode",
+        "minutes"
+      ],
+      "duplicate_key_values": 0,
+      "max_rows_per_key": 1
+    },
+    {
+      "file": "one_user_one_agent_pack\\replay\\arms.csv",
+      "rows": 5000,
+      "columns": [
+        "user_id",
+        "arm"
+      ],
+      "duplicate_key_values": 0,
+      "max_rows_per_key": 1,
+      "arm_counts": {
+        "holdout": 2487,
+        "agent": 2513
+      }
+    },
+    {
+      "file": "one_user_one_agent_pack\\pilot\\pilot_assignment.csv",
+      "rows": 3891,
+      "columns": [
+        "user_id",
+        "arm",
+        "served"
+      ],
+      "duplicate_key_values": 0,
+      "max_rows_per_key": 1
+    },
+    {
+      "file": "one_user_one_agent_pack\\pilot\\pilot_outcomes.csv",
+      "rows": 3891,
+      "columns": [
+        "user_id",
+        "arm",
+        "served",
+        "goal_id",
+        "goal_started_at",
+        "succeeded"
+      ],
+      "duplicate_key_values": 0,
+      "max_rows_per_key": 1
+    }
+  ]
+}

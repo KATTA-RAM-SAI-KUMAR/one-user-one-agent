@@ -1,0 +1,9 @@
+{
+  "source": "sample_run/replay_report.json",
+  "processing_elapsed_ms": 1897.378,
+  "average_decision_ms": 0.7082,
+  "decision_count": 2679,
+  "p95_latency_ms": null,
+  "p99_latency_ms": null,
+  "note": "Percentile latency was not recorded by the existing replay report."
+}

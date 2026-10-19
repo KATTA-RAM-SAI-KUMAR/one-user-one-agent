@@ -1,0 +1,18 @@
+{
+  "user_id": "U-00851",
+  "decision_count": 1,
+  "action_ids": [],
+  "evidence_references": [],
+  "processed_trigger_ids": [
+    "03b97abf-7fd1-4590-b8ff-59b859e5092f"
+  ],
+  "latest_decision_id": "D-2215",
+  "latest_trigger_event_id": "03b97abf-7fd1-4590-b8ff-59b859e5092f",
+  "latest_trigger_type": "app_open",
+  "latest_reason": "No profile available; abstained",
+  "arm": "holdout",
+  "active_goal": null,
+  "latest_deliver_at": "2026-10-01T15:33:52.549Z",
+  "source": "decisions.jsonl",
+  "state_type": "replay_derived_persisted_state"
+}

@@ -1,0 +1,36 @@
+{
+  "scope": "Preliminary event-level comparison; not goal success attribution",
+  "seed": "oua-practice",
+  "triggered_users": 1746,
+  "decision_rows": 2679,
+  "published_actions": 1157,
+  "users_receiving_actions": 757,
+  "arms": {
+    "agent": {
+      "triggered_users": 863,
+      "users_with_play_started": 646,
+      "play_user_rate": 0.7486,
+      "users_with_purchase_completed": 36,
+      "purchase_user_rate": 0.0417,
+      "users_receiving_actions": 757
+    },
+    "holdout": {
+      "triggered_users": 883,
+      "users_with_play_started": 669,
+      "play_user_rate": 0.7576,
+      "users_with_purchase_completed": 36,
+      "purchase_user_rate": 0.0408,
+      "users_receiving_actions": 0
+    }
+  },
+  "descriptive_differences": {
+    "play_user_rate": -0.009,
+    "purchase_user_rate": 0.0009
+  },
+  "notes": [
+    "Rates use unique triggered users as denominators.",
+    "Outcome events are simulated and depend on the simulator seed.",
+    "These metrics do not establish goal-specific success or causal uplift.",
+    "Validate holdout isolation and goal attribution before final claims."
+  ]
+}

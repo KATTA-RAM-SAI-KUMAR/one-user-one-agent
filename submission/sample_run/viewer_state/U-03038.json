@@ -1,0 +1,25 @@
+{
+  "user_id": "U-03038",
+  "decision_count": 3,
+  "action_ids": [],
+  "evidence_references": [
+    "measurable_success_event:play_started",
+    "success_window_hours:24",
+    "measurable_success_event:episode_completed",
+    "success_window_hours:72"
+  ],
+  "processed_trigger_ids": [
+    "39d17482-7bf8-4bdf-a8fd-dfc807e00733",
+    "6d8c1137-a0d0-4b28-8e13-7e0fb41558da",
+    "b73aa32a-2374-4cf9-ac66-2bffaa414fba"
+  ],
+  "latest_decision_id": "D-1873",
+  "latest_trigger_event_id": "b73aa32a-2374-4cf9-ac66-2bffaa414fba",
+  "latest_trigger_type": "app_open",
+  "latest_reason": "Goal selected, but no valid dialect-specific title; abstained",
+  "arm": "agent",
+  "active_goal": null,
+  "latest_deliver_at": "2026-10-01T14:34:55.852Z",
+  "source": "decisions.jsonl",
+  "state_type": "replay_derived_persisted_state"
+}

@@ -1,0 +1,54 @@
+{
+  "report_type": "goal_specific_outcome_attribution",
+  "goal_assignments_evaluated": 1643,
+  "overall_status_counts": {
+    "SUCCEEDED": 685,
+    "FAILED": 958
+  },
+  "arms": {
+    "agent": {
+      "assigned_goals": 809,
+      "succeeded": 369,
+      "failed": 440,
+      "inconclusive": 0,
+      "success_rate_among_all_assignments": 0.4561,
+      "success_rate_among_judged": 0.4561
+    },
+    "holdout": {
+      "assigned_goals": 834,
+      "succeeded": 316,
+      "failed": 518,
+      "inconclusive": 0,
+      "success_rate_among_all_assignments": 0.3789,
+      "success_rate_among_judged": 0.3789
+    }
+  },
+  "excluded_goal_rules": {
+    "G10": "The assignment defines no measurable success event."
+  },
+  "corrections_applied": {
+    "G03": {
+      "event": "play_started",
+      "condition": "on a later IST calendar day than the goal start"
+    }
+  },
+  "methodology": [
+    "First goal assignment per user and experiment arm is evaluated.",
+    "The deadline starts at the assigned decision's deliver_at timestamp.",
+    "Server received timestamps are used for event attribution.",
+    "Events outside the goal window are not counted as success.",
+    "G03 uses the corrected play_started event and a later IST calendar day.",
+    "G09 requires plays on three distinct IST calendar days.",
+    "G10 is excluded because it has no measurable success event.",
+    "An expired goal without a qualifying event is FAILED.",
+    "A goal whose deadline has not passed is INCONCLUSIVE if no success is observed.",
+    "This is descriptive goal attribution, not proof that the intervention caused success."
+  ],
+  "data_coverage": {
+    "profile_rows_resolved": 4858,
+    "experiment_arms_loaded": 5000,
+    "events_loaded_after_deduplication": 172407,
+    "catalogue_titles_loaded": 2014,
+    "observed_until": "2026-10-15T17:58:40.000Z"
+  }
+}

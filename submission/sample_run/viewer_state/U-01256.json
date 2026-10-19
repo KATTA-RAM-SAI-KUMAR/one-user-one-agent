@@ -1,0 +1,27 @@
+{
+  "user_id": "U-01256",
+  "decision_count": 2,
+  "action_ids": [
+    "A-0007",
+    "A-0201"
+  ],
+  "evidence_references": [
+    "measurable_success_event:play_started",
+    "success_window_hours:24",
+    "measurable_success_event:episode_completed",
+    "success_window_hours:72"
+  ],
+  "processed_trigger_ids": [
+    "c6dcdc81-89df-45bf-a87f-8083435b2dcb",
+    "cf8dc454-fb24-4148-b069-8da74cba10dd"
+  ],
+  "latest_decision_id": "D-0499",
+  "latest_trigger_event_id": "cf8dc454-fb24-4148-b069-8da74cba10dd",
+  "latest_trigger_type": "app_open",
+  "latest_reason": "Eligible measurable goal; home page action created",
+  "arm": "agent",
+  "active_goal": null,
+  "latest_deliver_at": "2026-10-01T04:46:57.369Z",
+  "source": "decisions.jsonl",
+  "state_type": "replay_derived_persisted_state"
+}
