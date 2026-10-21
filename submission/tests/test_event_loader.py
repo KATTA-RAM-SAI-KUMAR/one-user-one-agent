@@ -53,5 +53,61 @@ class EventLoaderTests(unittest.TestCase):
         )
 
 
+    def test_latest_app_dialect_wins_and_conflict_is_recorded(self):
+        profiles = {
+            "U1": {"preferred_dialect": "English"}
+        }
+        events = [
+            {
+                "event_id": "E1",
+                "user_id": "U1",
+                "event_type": "app_open",
+                "app_dialect": "Telugu",
+                "received_at": "2026-10-01T10:00:00Z",
+            },
+            {
+                "event_id": "E2",
+                "user_id": "U1",
+                "event_type": "app_open",
+                "app_dialect": "Hindi",
+                "received_at": "2026-10-01T11:00:00Z",
+            },
+        ]
+
+        result = resolve_viewer_facts("U1", events, profiles)
+
+        self.assertEqual(result["facts"]["app_dialect"]["value"], "Hindi")
+        dialect_conflicts = [
+            item for item in result["conflicts"]
+            if item["fact"] == "app_dialect"
+        ]
+        self.assertEqual(len(dialect_conflicts), 1)
+        self.assertEqual(dialect_conflicts[0]["previous"], "Telugu")
+        self.assertEqual(dialect_conflicts[0]["current"], "Hindi")
+        self.assertEqual(
+            dialect_conflicts[0]["resolution"],
+            "latest received event",
+        )
+
+    def test_app_dialect_is_separate_from_profile_preference(self):
+        profiles = {
+            "U1": {"preferred_dialect": "English"}
+        }
+        events = [{
+            "event_id": "E1",
+            "user_id": "U1",
+            "event_type": "app_open",
+            "app_dialect": "Telugu",
+            "received_at": "2026-10-01T10:00:00Z",
+        }]
+
+        result = resolve_viewer_facts("U1", events, profiles)
+
+        self.assertEqual(
+            result["facts"]["preferred_dialect"]["value"], "English"
+        )
+        self.assertEqual(result["facts"]["app_dialect"]["value"], "Telugu")
+
+
 if __name__ == "__main__":
     unittest.main()
