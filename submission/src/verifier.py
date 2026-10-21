@@ -1,7 +1,8 @@
+﻿"""Independent safety checks for proposed STAGE actions."""
 
-"""Independent safety checks for proposed STAGE actions."""
+from datetime import datetime, time, timedelta, timezone
 
-from datetime import time, timedelta, timezone
+from .message_policy import verify_message_policy
 
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -24,12 +25,14 @@ def verify_action(
     notifications_opt_in=False,
     whatsapp_opt_in=False,
     prior_message_date=None,
+    prior_message_times=(),
+    approved_template_ids=(),
     now=None,
     available_title_ids=None,
     title_dialects=None,
     content_slugs=None,
 ):
-    """Return independent verification results; reject unsafe actions."""
+    """Independently verify an action; reject unsafe or unverifiable messages."""
     passed = []
     failed = []
 
@@ -37,13 +40,26 @@ def verify_action(
         (passed if condition else failed).append(name)
 
     action = str(decision.get("action", "NONE")).upper()
-    now = now or decision.get("now")
+    # Fall back only when the caller omitted the argument; an explicit None
+    # means the publish time is unavailable and message actions must fail closed.
+    import inspect
+    if "now" not in inspect.signature(verify_action).bind_partial(
+        decision,
+        arm=arm,
+        trigger_id=trigger_id,
+        processed_trigger_ids=processed_trigger_ids,
+        notifications_opt_in=notifications_opt_in,
+        whatsapp_opt_in=whatsapp_opt_in,
+        prior_message_date=prior_message_date,
+        now=now,
+        available_title_ids=available_title_ids,
+        title_dialects=title_dialects,
+        content_slugs=content_slugs,
+    ).arguments:
+        now = decision.get("now")
 
     check("holdout_isolation", arm != "holdout")
-    check(
-        "idempotency",
-        trigger_id not in processed_trigger_ids,
-    )
+    check("idempotency", trigger_id not in processed_trigger_ids)
 
     if action in {"NONE", "NO_ACTION"}:
         return {
@@ -64,34 +80,57 @@ def verify_action(
             "reason": "Holdout viewers must receive zero actions",
         }
 
-    if action in {"PUSH", "WHATSAPP"}:
+    if action in {"PUSH", "WHATSAPP", "IN_APP"}:
         consent = (
-            notifications_opt_in
-            if action == "PUSH"
-            else whatsapp_opt_in
+            notifications_opt_in if action == "PUSH"
+            else whatsapp_opt_in if action == "WHATSAPP"
+            else decision.get("in_app_opt_in", False)
         )
         check("channel_consent", consent)
 
-        local_now = None
-        if now is not None:
+        parsed_now = None
+        try:
             if isinstance(now, str):
-                from submission.src.event_loader import parse_timestamp
-                now = parse_timestamp(now)
-            if now is not None:
-                local_now = now.astimezone(IST)
+                from .event_loader import parse_timestamp
+                parsed_now = parse_timestamp(now)
+            elif isinstance(now, datetime):
+                parsed_now = now
 
-        if local_now is not None:
-            current_time = local_now.time().replace(tzinfo=None)
-            quiet = current_time >= time(22, 0) or current_time < time(8, 0)
-            check("quiet_hours", not quiet)
+            if parsed_now is None or parsed_now.tzinfo is None:
+                raise ValueError("Missing timezone-aware publish time")
 
-            if prior_message_date is not None:
-                check(
-                    "daily_frequency_cap",
-                    prior_message_date != local_now.date().isoformat(),
+            history = list(prior_message_times or ())
+
+            # Adapt the legacy local-date input for the shared policy check.
+            if prior_message_date:
+                previous_date = datetime.fromisoformat(
+                    str(prior_message_date)
+                ).date()
+                history.append(
+                    datetime.combine(
+                        previous_date, time(12, 0), tzinfo=IST
+                    )
                 )
-        else:
-            failed.append("missing_verifiable_publish_time")
+
+            policy = verify_message_policy(
+                channel=action,
+                now=parsed_now,
+                consent=consent,
+                prior_message_times=history,
+                template_id=decision.get("template_id"),
+                approved_template_ids=approved_template_ids,
+                arm=arm,
+            )
+
+            passed.extend(
+                f"message_policy:{name}" for name in policy["passed"]
+            )
+            failed.extend(
+                f"message_policy:{name}" for name in policy["failed"]
+            )
+
+        except (TypeError, ValueError, OverflowError):
+            failed.append("message_policy_unverifiable_publish_time")
 
     if action == "PUSH":
         title = decision.get("message_title", "")
@@ -102,7 +141,10 @@ def verify_action(
         check("push_body_length", len(body) <= 120)
         check(
             "honest_push_copy",
-            not any(phrase in combined for phrase in FORBIDDEN_PUSH_PHRASES),
+            not any(
+                phrase in combined
+                for phrase in FORBIDDEN_PUSH_PHRASES
+            ),
         )
 
         deeplink = decision.get("deeplink", "")
@@ -120,14 +162,18 @@ def verify_action(
         check("home_page_has_valid_row", bool(rows))
         check(
             "home_page_row_size",
-            all(3 <= len(row.get("title_ids", [])) <= 10 for row in rows),
+            all(
+                3 <= len(row.get("title_ids", [])) <= 10
+                for row in rows
+            ),
         )
 
         if content_slugs is not None:
             slugs = [content_slugs.get(title) for title in content]
             check(
                 "unique_content_slug",
-                all(slug for slug in slugs) and len(slugs) == len(set(slugs)),
+                all(slug for slug in slugs)
+                and len(slugs) == len(set(slugs)),
             )
 
         if available_title_ids is not None:
@@ -140,7 +186,10 @@ def verify_action(
         if title_dialects is not None:
             check(
                 "title_dialect",
-                all(title_dialects.get(title) == dialect for title in content),
+                all(
+                    title_dialects.get(title) == dialect
+                    for title in content
+                ),
             )
 
     supported_actions = {
@@ -154,3 +203,4 @@ def verify_action(
         "failed": failed,
         "reason": "All checks passed" if not failed else "Action rejected",
     }
+
