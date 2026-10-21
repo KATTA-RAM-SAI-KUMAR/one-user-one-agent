@@ -61,7 +61,7 @@ python -m unittest discover -s submission\tests -v
 - Published actions: 1,060
 - Users receiving actions: 699
 - Simulated outcome events: 31,469
-- Submission tests: 22 passed
+- Submission tests: 30 passed
 
 See `sample_run/final_report.md` for goal-attribution results, confidence intervals, and interpretation.
 
@@ -71,5 +71,5 @@ See `sample_run/final_report.md` for goal-attribution results, confidence interv
 - The event-level confidence intervals include zero for both play and purchase differences.
 - Viewer state is replay-derived file-backed persistence, not a transactional production database.
 - The current baseline generates home-page actions only; push and WhatsApp delivery are not enabled.
-- Source-conflict resolution, real dependency failures, and some goal-eligibility cases need deeper integration testing.
+- Unit tests cover selected source-conflict resolution, dependency-failure reporting, corrected goal rules, and trigger-age/idempotency behavior. Broader end-to-end scenario coverage remains incomplete.
 - Run the commands from the project root. The documented Python modules use the submission.src implementation.
