@@ -1,18 +1,14 @@
 {
   "user_id": "U-00106",
-  "decision_count": 2,
+  "decision_count": 1,
   "action_ids": [
-    "A-0455",
     "A-0597"
   ],
   "evidence_references": [
-    "measurable_success_event:play_started",
-    "success_window_hours:24",
     "measurable_success_event:episode_completed",
     "success_window_hours:72"
   ],
   "processed_trigger_ids": [
-    "2cf3bf25-9fc6-4ad4-b689-a696a41aac06",
     "be11f3a1-c924-4ebb-a590-426b5fa054f4"
   ],
   "latest_decision_id": "D-1587",
@@ -20,7 +16,25 @@
   "latest_trigger_type": "app_open",
   "latest_reason": "Eligible measurable goal; home page action created",
   "arm": "agent",
-  "active_goal": null,
+  "active_goal": {
+    "goal_id": "G02",
+    "name": "first_full_episode_3d",
+    "description": "The user finishes a whole episode (90% or more) for the first time.",
+    "eligibility": {
+      "text": "Has never completed an episode.",
+      "requires_no_prior_event": "episode_completed"
+    },
+    "success": {
+      "event": "episode_completed",
+      "condition": "any episode",
+      "window_hours": 72
+    },
+    "_active_started_at": "2026-10-01T13:02:38.589Z",
+    "_active_deadline": "2026-10-04T13:02:38.589Z"
+  },
+  "active_goal_status": "ACTIVE",
+  "active_goal_started_at": "2026-10-01T13:02:38.589Z",
+  "active_goal_deadline": "2026-10-04T13:02:38.589Z",
   "latest_deliver_at": "2026-10-01T13:02:38.589Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

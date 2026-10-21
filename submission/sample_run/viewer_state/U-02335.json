@@ -1,10 +1,9 @@
 {
   "user_id": "U-02335",
-  "decision_count": 2,
+  "decision_count": 1,
   "action_ids": [],
   "evidence_references": [],
   "processed_trigger_ids": [
-    "152ad0b8-11a0-4f78-a4ce-9ac99cc1a993",
     "77afc02d-8f69-484f-965d-be8afd92c3c0"
   ],
   "latest_decision_id": "D-0209",
@@ -13,6 +12,9 @@
   "latest_reason": "No profile available; abstained",
   "arm": "holdout",
   "active_goal": null,
+  "active_goal_status": "NONE",
+  "active_goal_started_at": null,
+  "active_goal_deadline": null,
   "latest_deliver_at": "2026-10-01T03:05:35.498Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

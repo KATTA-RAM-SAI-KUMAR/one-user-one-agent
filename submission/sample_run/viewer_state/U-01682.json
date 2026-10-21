@@ -1,17 +1,13 @@
 {
   "user_id": "U-01682",
-  "decision_count": 3,
+  "decision_count": 1,
   "action_ids": [],
   "evidence_references": [
     "shadow_goal_assignment",
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
-    "a7065724-7527-42ae-b595-9af2ddd4ca72",
-    "ed2b93b9-4c29-445d-a9c7-5b046703ed18",
     "09c656da-93fb-4e5c-b881-78e4ce93a069"
   ],
   "latest_decision_id": "D-1716",
@@ -19,7 +15,26 @@
   "latest_trigger_type": "app_open",
   "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
   "arm": "holdout",
-  "active_goal": null,
+  "active_goal": {
+    "goal_id": "G01",
+    "name": "first_play_24h",
+    "description": "A new user starts any episode within 24 hours.",
+    "eligibility": {
+      "text": "Signed up in the last 7 days and has never started a play.",
+      "signed_up_within_days": 7,
+      "requires_no_prior_event": "play_started"
+    },
+    "success": {
+      "event": "play_started",
+      "condition": "any title",
+      "window_hours": 24
+    },
+    "_active_started_at": "2026-10-01T13:51:08.098Z",
+    "_active_deadline": "2026-10-02T13:51:08.098Z"
+  },
+  "active_goal_status": "ACTIVE",
+  "active_goal_started_at": "2026-10-01T13:51:08.098Z",
+  "active_goal_deadline": "2026-10-02T13:51:08.098Z",
   "latest_deliver_at": "2026-10-01T13:51:08.098Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

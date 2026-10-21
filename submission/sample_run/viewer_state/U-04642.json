@@ -1,25 +1,12 @@
 {
   "user_id": "U-04642",
-  "decision_count": 6,
-  "action_ids": [
-    "A-0495",
-    "A-0587",
-    "A-0598",
-    "A-0715",
-    "A-0716"
-  ],
+  "decision_count": 1,
+  "action_ids": [],
   "evidence_references": [
-    "measurable_success_event:play_started",
-    "success_window_hours:24",
     "measurable_success_event:episode_completed",
     "success_window_hours:72"
   ],
   "processed_trigger_ids": [
-    "3bbf0d12-fedd-4d62-b840-164273e35528",
-    "646c591c-5c29-4841-9037-2a9c9f231ea1",
-    "b3435d72-9011-408b-adb9-aab83010e61b",
-    "b620cde9-4d74-4f4e-92a7-d817fc1b8cec",
-    "e2d0d744-1196-4536-b767-39775c681b4a",
     "957716c3-b79c-485c-a256-e908bc8968b1"
   ],
   "latest_decision_id": "D-2022",
@@ -27,7 +14,25 @@
   "latest_trigger_type": "app_open",
   "latest_reason": "Goal selected, but no valid dialect-specific title; abstained",
   "arm": "agent",
-  "active_goal": null,
+  "active_goal": {
+    "goal_id": "G02",
+    "name": "first_full_episode_3d",
+    "description": "The user finishes a whole episode (90% or more) for the first time.",
+    "eligibility": {
+      "text": "Has never completed an episode.",
+      "requires_no_prior_event": "episode_completed"
+    },
+    "success": {
+      "event": "episode_completed",
+      "condition": "any episode",
+      "window_hours": 72
+    },
+    "_active_started_at": "2026-10-01T15:04:26.056Z",
+    "_active_deadline": "2026-10-04T15:04:26.056Z"
+  },
+  "active_goal_status": "ACTIVE",
+  "active_goal_started_at": "2026-10-01T15:04:26.056Z",
+  "active_goal_deadline": "2026-10-04T15:04:26.056Z",
   "latest_deliver_at": "2026-10-01T15:04:26.056Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

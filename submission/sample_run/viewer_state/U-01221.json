@@ -12,6 +12,9 @@
   "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "holdout",
   "active_goal": null,
+  "active_goal_status": "NONE",
+  "active_goal_started_at": null,
+  "active_goal_deadline": null,
   "latest_deliver_at": "2026-10-01T04:45:17.072Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

@@ -1,19 +1,13 @@
 {
   "user_id": "U-01630",
-  "decision_count": 5,
+  "decision_count": 1,
   "action_ids": [],
   "evidence_references": [
     "shadow_goal_assignment",
-    "measurable_success_event:play_started",
-    "success_window_hours:24",
     "measurable_success_event:episode_completed",
     "success_window_hours:72"
   ],
   "processed_trigger_ids": [
-    "a5e364e9-6364-4680-a878-f140ec97ad8b",
-    "9f4f1e6a-9672-4586-bdb2-a40b684d9045",
-    "cc61580d-5c69-41e8-a2f2-a0322952b484",
-    "c3059c41-b092-40e9-bf67-e7c40b965d37",
     "410c6886-ed24-469c-b0c1-4adb8c77b5ac"
   ],
   "latest_decision_id": "D-2422",
@@ -21,7 +15,25 @@
   "latest_trigger_type": "app_open",
   "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
   "arm": "holdout",
-  "active_goal": null,
+  "active_goal": {
+    "goal_id": "G02",
+    "name": "first_full_episode_3d",
+    "description": "The user finishes a whole episode (90% or more) for the first time.",
+    "eligibility": {
+      "text": "Has never completed an episode.",
+      "requires_no_prior_event": "episode_completed"
+    },
+    "success": {
+      "event": "episode_completed",
+      "condition": "any episode",
+      "window_hours": 72
+    },
+    "_active_started_at": "2026-10-01T16:39:45.360Z",
+    "_active_deadline": "2026-10-04T16:39:45.360Z"
+  },
+  "active_goal_status": "ACTIVE",
+  "active_goal_started_at": "2026-10-01T16:39:45.360Z",
+  "active_goal_deadline": "2026-10-04T16:39:45.360Z",
   "latest_deliver_at": "2026-10-01T16:39:45.360Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

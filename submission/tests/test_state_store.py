@@ -46,5 +46,27 @@ class ViewerStateStoreTests(unittest.TestCase):
                 store.upsert("../outside", {"decision_count": 1})
 
 
+
+
+    def test_selected_goal_is_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ViewerStateStore(directory)
+            decision = {
+                "decision_id": "D-1",
+                "trigger_event_id": "E-1",
+                "trigger_type": "app_open",
+                "goal": "G03",
+                "reason": "Eligible measurable goal",
+                "arm": "agent",
+                "action_ids": [],
+                "evidence": ["measurable_success_event:play_started"],
+            }
+
+            state = store.record_decision("USER-1", decision)
+
+            self.assertEqual(state["active_goal"], "G03")
+            self.assertEqual(store.get("USER-1")["active_goal"], "G03")
+
+
 if __name__ == "__main__":
     unittest.main()

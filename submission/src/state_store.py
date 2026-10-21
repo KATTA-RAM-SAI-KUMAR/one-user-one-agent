@@ -90,7 +90,7 @@ class ViewerStateStore:
         state["latest_trigger_type"] = decision.get("trigger_type")
         state["latest_reason"] = decision.get("reason")
         state["arm"] = decision.get("arm")
-        state["active_goal"] = decision.get("goal_id")
+        state["active_goal"] = decision.get("goal") or decision.get("goal_id")
 
         if trigger_id:
             processed.append(trigger_id)

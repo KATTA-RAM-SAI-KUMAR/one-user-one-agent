@@ -1,10 +1,9 @@
 {
   "user_id": "U-02051",
-  "decision_count": 2,
+  "decision_count": 1,
   "action_ids": [],
   "evidence_references": [],
   "processed_trigger_ids": [
-    "9569f103-8016-47e1-9d28-a62a969171f2",
     "6b80b258-a019-4fc2-a46a-66bb6586c11f"
   ],
   "latest_decision_id": "D-2287",
@@ -13,6 +12,9 @@
   "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "holdout",
   "active_goal": null,
+  "active_goal_status": "NONE",
+  "active_goal_started_at": null,
+  "active_goal_deadline": null,
   "latest_deliver_at": "2026-10-01T15:57:27.579Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

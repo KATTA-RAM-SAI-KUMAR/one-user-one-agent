@@ -16,6 +16,9 @@
   "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
   "arm": "holdout",
   "active_goal": null,
+  "active_goal_status": "NONE",
+  "active_goal_started_at": null,
+  "active_goal_deadline": null,
   "latest_deliver_at": "2026-10-01T02:46:58.924Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

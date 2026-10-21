@@ -206,6 +206,111 @@ def event_sort_key(event: dict[str, Any]) -> tuple[datetime, str]:
     return moment, str(event.get("event_id", ""))
 
 
+def open_goal_record(
+    goal: dict[str, Any],
+    now: datetime,
+    deadline: str | None,
+    history: list[dict[str, Any]],
+    catalogue: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Keep assignment metadata alongside the active goal."""
+    active = dict(goal)
+    active["_active_started_at"] = timestamp(now)
+    active["_active_deadline"] = deadline
+
+    # Preserve the series identity needed to verify a resume-series goal.
+    if goal_id(active) == "G07":
+        for prior in reversed(history):
+            if prior.get("event") != "play_started":
+                continue
+            props = prior.get("properties") or {}
+            title = catalogue.get(str(props.get("title_id") or ""))
+            slug = title.get("content_slug") if title else props.get("content_slug")
+            if slug:
+                active["_target_content_slug"] = str(slug)
+                break
+    return active
+
+
+def active_goal_event_status(
+    active: dict[str, Any],
+    event: dict[str, Any],
+    history: list[dict[str, Any]],
+    catalogue: dict[str, dict[str, Any]],
+) -> str | None:
+    """Return SUCCEEDED or EXPIRED only when the evidence supports it."""
+    now = event.get("_timeline_time")
+    if not isinstance(now, datetime):
+        now = parse_time(event.get("received_at") or event.get("deliver_at")
+                         or event.get("occurred_at"))
+    start = parse_time(active.get("_active_started_at"))
+    deadline = parse_time(active.get("_active_deadline"))
+
+    if now is None or start is None:
+        return None
+    if deadline is not None and now > deadline:
+        return "EXPIRED"
+    if now < start or event.get("_timeline_kind") == "control":
+        return None
+
+    identifier = goal_id(active)
+    success = active.get("success") or {}
+    if not isinstance(success, dict):
+        return None
+    expected = success.get("event")
+    if not expected or event.get("event") != expected:
+        return None
+
+    props = event.get("properties") or {}
+
+    # A goal corrected during replay uses its corrected active.success rule.
+    if identifier in {"G04", "G05", "G06"}:
+        if str(props.get("is_trial", "")).lower() == "true":
+            return None
+
+    if identifier == "G03":
+        if now.astimezone(IST).date() <= start.astimezone(IST).date():
+            return None
+
+    if identifier == "G07":
+        title = catalogue.get(str(props.get("title_id") or ""))
+        current_slug = (title or {}).get("content_slug") or props.get("content_slug")
+        target_slug = active.get("_target_content_slug")
+        if not target_slug or current_slug != target_slug:
+            return None
+
+    if identifier == "G08":
+        title = catalogue.get(str(props.get("title_id") or ""))
+        if not title or not title.get("release_date"):
+            return None
+        released = parse_time(title.get("release_date"))
+        if released is None:
+            try:
+                released = datetime.fromisoformat(
+                    str(title["release_date"])
+                ).replace(tzinfo=UTC)
+            except (ValueError, TypeError):
+                return None
+        age = start - released
+        if age < timedelta(0) or age > timedelta(days=30):
+            return None
+
+    if identifier == "G09":
+        qualifying = [
+            prior for prior in [*history, event]
+            if prior.get("event") == "play_started"
+            and isinstance(prior.get("_timeline_time"), datetime)
+            and start <= prior["_timeline_time"] <= (deadline or now)
+        ]
+        days = {
+            prior["_timeline_time"].astimezone(IST).date()
+            for prior in qualifying
+        }
+        return "SUCCEEDED" if len(days) >= 3 else None
+
+    return "SUCCEEDED"
+
+
 def load_timeline(pack: Path) -> list[dict[str, Any]]:
     """
     Merge replay triggers, live events and operational controls.
@@ -547,6 +652,16 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
         if not user_id:
             continue
 
+        # Advance the viewer's existing goal before handling this event.
+        # Expired goals cannot be revived by a late success event.
+        active = active_goals.get(user_id)
+        if active:
+            lifecycle = active_goal_event_status(
+                active, event, history[user_id], title_by_id
+            )
+            if lifecycle in {"SUCCEEDED", "EXPIRED"}:
+                active_goals.pop(user_id, None)
+
         if kind == "live":
             event_name = event.get("event")
 
@@ -697,7 +812,10 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
                     "Holdout shadow goal assigned; agent actions prohibited"
                 )
                 # Track the same open-goal lifecycle for shadow evaluation.
-                active_goals[user_id] = dict(shadow_goal)
+                active_goals[user_id] = open_goal_record(
+                    shadow_goal, now, decision.get("deadline"),
+                    history[user_id], title_by_id
+                )
             else:
                 decision["reason"] = (
                     "Holdout; no eligible measurable shadow goal"
@@ -742,7 +860,10 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
         decision["evidence"] = evidence
         # The current rule engine does not emit explicit assumptions or a
         # calibrated confidence score. Keep those unknown rather than inventing them.
-        active_goals[user_id] = dict(selected_goal)
+        active_goals[user_id] = open_goal_record(
+            selected_goal, now, decision.get("deadline"),
+            history[user_id], title_by_id
+        )
 
         # Only create an action if a valid dialect and currently available
         # catalogue content exist. This baseline intentionally uses the
@@ -891,17 +1012,30 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
                 old_state.unlink()
 
     state_store = ViewerStateStore(state_dir)
+    # Persist one final state per viewer. Do not replay historical decisions
+    # into the state store, because that can overwrite the final goal lifecycle.
+    latest_decision_by_user: dict[str, dict[str, Any]] = {}
     for decision in decisions:
-        user_id = str(decision.get("user_id", ""))
-        if not user_id:
-            continue
+        user_id = str(decision.get("user_id", "")).strip()
+        if user_id:
+            latest_decision_by_user[user_id] = decision
 
+    for user_id, decision in latest_decision_by_user.items():
         state = state_store.record_decision(user_id, decision)
+        active_goal = active_goals.get(user_id)
+
+        state["active_goal"] = active_goal
+        state["active_goal_status"] = "ACTIVE" if active_goal else "NONE"
+        state["active_goal_started_at"] = (
+            active_goal.get("_active_started_at") if active_goal else None
+        )
+        state["active_goal_deadline"] = (
+            active_goal.get("_active_deadline") if active_goal else None
+        )
         state["latest_deliver_at"] = decision.get("deliver_at")
         state["source"] = "decisions.jsonl"
         state["state_type"] = "replay_derived_persisted_state"
         state_store.upsert(user_id, state)
-
     viewer_files = sorted(
         file.name for file in state_dir.glob("*.json")
         if file.name != "index.json"

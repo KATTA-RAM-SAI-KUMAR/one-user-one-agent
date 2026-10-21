@@ -1,20 +1,14 @@
 {
   "user_id": "U-00023",
-  "decision_count": 3,
+  "decision_count": 1,
   "action_ids": [
-    "A-0053",
-    "A-0054",
     "A-0814"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
-    "43fe95f1-fe37-4176-9f63-898e3d0d0a33",
-    "ab6a9f48-8f9f-440f-b528-f606695ab644",
     "6750b3a3-f964-41f0-b0a4-eccab78a91f7"
   ],
   "latest_decision_id": "D-2084",
@@ -22,7 +16,26 @@
   "latest_trigger_type": "app_open",
   "latest_reason": "Eligible measurable goal; home page action created",
   "arm": "agent",
-  "active_goal": null,
+  "active_goal": {
+    "goal_id": "G01",
+    "name": "first_play_24h",
+    "description": "A new user starts any episode within 24 hours.",
+    "eligibility": {
+      "text": "Signed up in the last 7 days and has never started a play.",
+      "signed_up_within_days": 7,
+      "requires_no_prior_event": "play_started"
+    },
+    "success": {
+      "event": "play_started",
+      "condition": "any title",
+      "window_hours": 24
+    },
+    "_active_started_at": "2026-10-01T15:08:06.699Z",
+    "_active_deadline": "2026-10-02T15:08:06.699Z"
+  },
+  "active_goal_status": "ACTIVE",
+  "active_goal_started_at": "2026-10-01T15:08:06.699Z",
+  "active_goal_deadline": "2026-10-02T15:08:06.699Z",
   "latest_deliver_at": "2026-10-01T15:08:06.699Z",
   "source": "decisions.jsonl",
   "state_type": "replay_derived_persisted_state"

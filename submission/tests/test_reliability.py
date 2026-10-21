@@ -100,5 +100,42 @@ class ReliabilityTests(unittest.TestCase):
         )
 
 
+    def test_active_goal_expires_after_deadline(self):
+        from submission.src.replay_engine import active_goal_event_status
+        from datetime import datetime, timezone
+
+        active = {
+            "goal_id": "G01",
+            "success": {"event": "play_started", "window_hours": 24},
+            "_active_started_at": "2026-10-01T10:00:00Z",
+            "_active_deadline": "2026-10-02T10:00:00Z",
+        }
+        event = {
+            "event": "play_started",
+            "_timeline_kind": "live",
+            "_timeline_time": datetime(2026, 10, 2, 10, 0, 1, tzinfo=timezone.utc),
+            "properties": {},
+        }
+        self.assertEqual(active_goal_event_status(active, event, [], {}), "EXPIRED")
+
+    def test_active_goal_success_requires_matching_event(self):
+        from submission.src.replay_engine import active_goal_event_status
+        from datetime import datetime, timezone
+
+        active = {
+            "goal_id": "G01",
+            "success": {"event": "play_started", "window_hours": 24},
+            "_active_started_at": "2026-10-01T10:00:00Z",
+            "_active_deadline": "2026-10-02T10:00:00Z",
+        }
+        event = {
+            "event": "home_viewed",
+            "_timeline_kind": "live",
+            "_timeline_time": datetime(2026, 10, 1, 11, 0, tzinfo=timezone.utc),
+            "properties": {},
+        }
+        self.assertIsNone(active_goal_event_status(active, event, [], {}))
+
+
 if __name__ == "__main__":
     unittest.main()
