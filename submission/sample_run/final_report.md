@@ -36,7 +36,7 @@ These results are descriptive goal attribution and do not establish that the age
 Both confidence intervals include zero. This event-level comparison does not show a clear difference between the rates. These simulated outcomes depend on the simulator seed and do not establish causal uplift.
 
 ## Reliability and Verification
-- Submission test suite: 22 tests passed in the latest run.
+- Submission test suite: 54 tests passed in the latest run.
 - Independent verifier is applied before replay actions are accepted.
 - Duplicate-trigger handling and stale-trigger abstention are implemented.
 - Actions are not generated for holdout users.
