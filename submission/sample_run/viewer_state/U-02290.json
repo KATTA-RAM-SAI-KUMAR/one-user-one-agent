@@ -2,14 +2,11 @@
   "user_id": "U-02290",
   "decision_count": 2,
   "action_ids": [
-    "A-0637",
-    "A-0814"
+    "A-0564"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
     "2a77fc58-0df4-417d-8a75-09d400f9bfd1",
@@ -18,7 +15,7 @@
   "latest_decision_id": "D-1888",
   "latest_trigger_event_id": "577b9923-e4a7-4a54-b191-fcaec7159c9c",
   "latest_trigger_type": "app_open",
-  "latest_reason": "Eligible measurable goal; home page action created",
+  "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "agent",
   "active_goal": null,
   "latest_deliver_at": "2026-10-01T14:39:22.627Z",

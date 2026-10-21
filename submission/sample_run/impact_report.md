@@ -1,43 +1,31 @@
-# Impact Report
+# Agent vs Holdout Impact Report
 
-## Scope
-Preliminary event-level comparison; not goal success attribution
+**Scope:** Preliminary event-level comparison; not goal success attribution
 
-This report summarizes the existing simulated results. Differences are descriptive and do not establish causal impact.
+## Results
 
-## Event-level comparison
+| Metric | Agent | Holdout | Difference (Agent - Holdout) | 95% confidence interval |
+|---|---:|---:|---:|---:|
+| Play-started user rate | 74.86% | 75.76% | -0.90% | [-4.96%, +3.14%] |
+| Purchase-completed user rate | 4.17% | 4.08% | +0.09% | [-1.80%, +2.00%] |
 
-| Metric | Agent | Holdout | Difference (agent - holdout) |
-|---|---:|---:|---:|
-| Triggered users | 863 | 883 | ? |
-| Users with play started | 646 | 669 | ? |
-| Play user rate | 0.7486 | 0.7576 | -0.0090 |
-| Users with purchase completed | 36 | 36 | ? |
-| Purchase user rate | 0.0417 | 0.0408 | +0.0009 |
+## Sample sizes
 
-## Goal-specific attribution
+- Triggered users: 1746
+- Decision rows: 2679
+- Published actions: 1060
+- Users receiving actions: 699
+- Agent users: 863
+- Holdout users: 883
 
-| Metric | Agent | Holdout |
-|---|---:|---:|
-| Assigned goals | 809 | 834 |
-| Succeeded | 369 | 316 |
-| Failed | 440 | 518 |
-| Success rate among assignments | 0.4561 | 0.3789 |
+## Interpretation and limitations
 
-The observed goal-success rate difference is descriptive only. Eligibility and goal attribution still require validation.
-
-## Replay summary
-
-- Triggers: 2679
-- Decisions: 2679
-- Actions created: 1157
-- Holdout decisions: 1234
-- Abstentions: 288
-- Holdout actions created: 0
-
-## Limitations
-
+- Both 95% confidence intervals include zero; this analysis does not show a clear difference between agent and holdout rates.
 - Outcomes are simulated and depend on the simulator seed.
-- The event-level report does not establish goal-specific success or causal uplift.
-- Validate holdout isolation and goal attribution before making impact claims.
-- Percentile latency measurements were not available in the recorded replay report.
+- Confidence intervals quantify sampling uncertainty; they do not correct data-quality issues or bias.
+- These event-level metrics do not establish goal-specific success.
+- Do not claim causal uplift without validating randomization, assignment integrity, outcome attribution, and holdout isolation.
+
+## Source
+
+Generated from `impact_report.json` using the current replay and simulation outputs.

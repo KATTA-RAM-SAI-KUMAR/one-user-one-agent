@@ -27,6 +27,7 @@ def verify_action(
     now=None,
     available_title_ids=None,
     title_dialects=None,
+    content_slugs=None,
 ):
     """Return independent verification results; reject unsafe actions."""
     passed = []
@@ -113,8 +114,21 @@ def verify_action(
 
     if action == "HOME_PAGE":
         content = decision.get("content", [])
+        rows = decision.get("rows", [])
         check("home_page_has_titles", bool(content))
-        check("home_page_row_limit", len(decision.get("rows", [])) <= 6)
+        check("home_page_row_limit", len(rows) <= 6)
+        check("home_page_has_valid_row", bool(rows))
+        check(
+            "home_page_row_size",
+            all(3 <= len(row.get("title_ids", [])) <= 10 for row in rows),
+        )
+
+        if content_slugs is not None:
+            slugs = [content_slugs.get(title) for title in content]
+            check(
+                "unique_content_slug",
+                all(slug for slug in slugs) and len(slugs) == len(set(slugs)),
+            )
 
         if available_title_ids is not None:
             check(

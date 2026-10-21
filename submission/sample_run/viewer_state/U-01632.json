@@ -2,9 +2,9 @@
   "user_id": "U-01632",
   "decision_count": 3,
   "action_ids": [
-    "A-0043",
-    "A-0738",
-    "A-1116"
+    "A-0042",
+    "A-0659",
+    "A-1019"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",

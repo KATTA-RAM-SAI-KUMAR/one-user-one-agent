@@ -5,9 +5,7 @@
   "evidence_references": [
     "shadow_goal_assignment",
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
     "bed300ed-4bc2-4567-9f51-177bbba6491e",
@@ -16,7 +14,7 @@
   "latest_decision_id": "D-2493",
   "latest_trigger_event_id": "4b6fc894-a64e-46f4-87e9-56331f9dfacd",
   "latest_trigger_type": "app_open",
-  "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
+  "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "holdout",
   "active_goal": null,
   "latest_deliver_at": "2026-10-01T16:59:29.942Z",

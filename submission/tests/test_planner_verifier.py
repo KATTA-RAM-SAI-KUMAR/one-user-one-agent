@@ -39,6 +39,60 @@ class PlannerVerifierTests(unittest.TestCase):
         )
         self.assertFalse(result["approved"])
 
+    def test_unavailable_home_page_title_is_rejected(self):
+        result = verify_action(
+            {
+                "action": "HOME_PAGE",
+                "content": ["TITLE_1"],
+                "rows": [{"title_ids": ["TITLE_1", "TITLE_2", "TITLE_3"]}],
+                "dialect": {"used": "te"},
+            },
+            arm="agent",
+            trigger_id="E2",
+            processed_trigger_ids=set(),
+            available_title_ids={"TITLE_2", "TITLE_3"},
+        )
+        self.assertFalse(result["approved"])
+        self.assertIn("title_availability", result["failed"])
+
+    def test_dialect_mismatch_is_rejected(self):
+        result = verify_action(
+            {
+                "action": "HOME_PAGE",
+                "content": ["TITLE_1", "TITLE_2", "TITLE_3"],
+                "rows": [{"title_ids": ["TITLE_1", "TITLE_2", "TITLE_3"]}],
+                "dialect": {"used": "te"},
+            },
+            arm="agent",
+            trigger_id="E3",
+            processed_trigger_ids=set(),
+            available_title_ids={"TITLE_1", "TITLE_2", "TITLE_3"},
+            title_dialects={
+                "TITLE_1": "te",
+                "TITLE_2": "hi",
+                "TITLE_3": "te",
+            },
+        )
+        self.assertFalse(result["approved"])
+        self.assertIn("title_dialect", result["failed"])
+
+    def test_push_without_consent_is_rejected(self):
+        result = verify_action(
+            {
+                "action": "PUSH",
+                "message_title": "New episode",
+                "message_body": "Continue watching your show",
+                "deeplink": "ott://title/TITLE_1",
+            },
+            arm="agent",
+            trigger_id="E4",
+            processed_trigger_ids=set(),
+            notifications_opt_in=False,
+            now="2026-10-19T12:00:00+05:30",
+        )
+        self.assertFalse(result["approved"])
+        self.assertIn("channel_consent", result["failed"])
+
 
 if __name__ == "__main__":
     unittest.main()

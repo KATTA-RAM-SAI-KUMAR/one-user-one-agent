@@ -5,9 +5,7 @@
   "evidence_references": [
     "shadow_goal_assignment",
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
     "aac7fc6d-adc5-4f4d-b5f4-ac42f07bc6ed",

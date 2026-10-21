@@ -3,34 +3,74 @@
   "seed": "oua-practice",
   "triggered_users": 1746,
   "decision_rows": 2679,
-  "published_actions": 1157,
-  "users_receiving_actions": 757,
+  "published_actions": 1060,
+  "users_receiving_actions": 699,
   "arms": {
     "agent": {
       "triggered_users": 863,
+      "users_receiving_actions": 699,
       "users_with_play_started": 646,
       "play_user_rate": 0.7486,
       "users_with_purchase_completed": 36,
-      "purchase_user_rate": 0.0417,
-      "users_receiving_actions": 757
+      "purchase_user_rate": 0.0417
     },
     "holdout": {
       "triggered_users": 883,
+      "users_receiving_actions": 0,
       "users_with_play_started": 669,
       "play_user_rate": 0.7576,
       "users_with_purchase_completed": 36,
-      "purchase_user_rate": 0.0408,
-      "users_receiving_actions": 0
+      "purchase_user_rate": 0.0408
     }
   },
   "descriptive_differences": {
     "play_user_rate": -0.009,
     "purchase_user_rate": 0.0009
   },
+  "confidence_intervals_95": {
+    "play_user_rate": {
+      "method": "Wilson score intervals; Newcombe difference interval",
+      "confidence_level": 0.95,
+      "agent_rate": [
+        0.7185,
+        0.7764
+      ],
+      "holdout_rate": [
+        0.7283,
+        0.7848
+      ],
+      "difference_agent_minus_holdout": [
+        -0.0496,
+        0.0314
+      ],
+      "difference_excludes_zero": false,
+      "interpretation": "The 95% interval includes zero; this analysis does not show a clear difference between the rates."
+    },
+    "purchase_user_rate": {
+      "method": "Wilson score intervals; Newcombe difference interval",
+      "confidence_level": 0.95,
+      "agent_rate": [
+        0.0303,
+        0.0572
+      ],
+      "holdout_rate": [
+        0.0296,
+        0.0559
+      ],
+      "difference_agent_minus_holdout": [
+        -0.018,
+        0.02
+      ],
+      "difference_excludes_zero": false,
+      "interpretation": "The 95% interval includes zero; this analysis does not show a clear difference between the rates."
+    }
+  },
   "notes": [
     "Rates use unique triggered users as denominators.",
-    "Outcome events are simulated and depend on the simulator seed.",
-    "These metrics do not establish goal-specific success or causal uplift.",
-    "Validate holdout isolation and goal attribution before final claims."
+    "The outcomes are simulated and depend on the simulator seed.",
+    "The difference is agent rate minus holdout rate.",
+    "Confidence intervals quantify sampling uncertainty under the binary-outcome model; they do not correct bias or data-quality issues.",
+    "These event-level metrics do not establish goal-specific success.",
+    "Do not claim causal uplift without validating randomization, assignment integrity, outcome attribution, and holdout isolation."
   ]
 }

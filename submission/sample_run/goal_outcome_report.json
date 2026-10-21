@@ -1,26 +1,26 @@
 {
   "report_type": "goal_specific_outcome_attribution",
-  "goal_assignments_evaluated": 1643,
+  "goal_assignments_evaluated": 1504,
   "overall_status_counts": {
-    "SUCCEEDED": 685,
-    "FAILED": 958
+    "SUCCEEDED": 677,
+    "FAILED": 827
   },
   "arms": {
     "agent": {
-      "assigned_goals": 809,
-      "succeeded": 369,
-      "failed": 440,
+      "assigned_goals": 748,
+      "succeeded": 365,
+      "failed": 383,
       "inconclusive": 0,
-      "success_rate_among_all_assignments": 0.4561,
-      "success_rate_among_judged": 0.4561
+      "success_rate_among_all_assignments": 0.488,
+      "success_rate_among_judged": 0.488
     },
     "holdout": {
-      "assigned_goals": 834,
-      "succeeded": 316,
-      "failed": 518,
+      "assigned_goals": 756,
+      "succeeded": 312,
+      "failed": 444,
       "inconclusive": 0,
-      "success_rate_among_all_assignments": 0.3789,
-      "success_rate_among_judged": 0.3789
+      "success_rate_among_all_assignments": 0.4127,
+      "success_rate_among_judged": 0.4127
     }
   },
   "excluded_goal_rules": {

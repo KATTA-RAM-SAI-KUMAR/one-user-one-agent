@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,8 @@ from pathlib import Path
 from typing import Any
 
 from src.state_store import ViewerStateStore
+from src.verifier import verify_action
+from submission.src.deeplink_parser import parse_campaign_deeplink
 
 
 UTC = timezone.utc
@@ -80,6 +83,15 @@ def parse_time(value: Any) -> datetime | None:
     except (ValueError, TypeError):
         return None
 
+
+
+def trigger_age_seconds(event: dict[str, Any]) -> float | None:
+    """Return server-received age of a trigger, or None when timestamps are absent."""
+    received = parse_time(event.get("received_at") or event.get("deliver_at"))
+    occurred = parse_time(event.get("occurred_at") or event.get("sent_at"))
+    if received is None or occurred is None:
+        return None
+    return max(0.0, (received - occurred).total_seconds())
 
 def timestamp(value: datetime) -> str:
     return value.astimezone(UTC).isoformat(timespec="milliseconds").replace(
@@ -468,6 +480,11 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
     active_goals: dict[str, dict[str, Any]] = {}
     opt_outs: dict[str, set[str]] = defaultdict(set)
     withdrawn_titles: set[str] = set()
+    processed_trigger_ids: set[str] = set()
+
+    title_by_id = {str(row.get("title_id", "")): row for row in catalogue}
+    title_dialects = {key: str(row.get("dialect", "")) for key, row in title_by_id.items()}
+    content_slugs = {key: str(row.get("content_slug", "")) for key, row in title_by_id.items()}
 
     decision_number = 0
     action_number = 0
@@ -536,6 +553,7 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
 
         trigger_count += 1
         decision_number += 1
+        decision_started = time.perf_counter()
 
         decision_id = f"D-{decision_number:04d}"
         arm = arms.get(user_id, "unknown").lower()
@@ -546,19 +564,79 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
             "user_id": user_id,
             "trigger_event_id": str(event.get("event_id", "")),
             "trigger_type": str(event.get("event", "")),
+            "received_at": event.get("received_at") or event.get("deliver_at"),
             "deliver_at": timestamp(now),
             "arm": arm,
             "goal": None,
+            "deadline": None,
+            "confidence": None,
+            "assumptions": [],
+            "status": "ABSTAINED",
+            "dialect": {
+                "app": event.get("app_dialect") or None,
+                "profile": (profile or {}).get("preferred_dialect") or None,
+                "used": None,
+            },
+            "source_conflicts": [],
             "evidence": [],
             "reason": "",
             "action_ids": [],
             "checks": {"passed": [], "failed": []},
         }
 
+        app_dialect = str(event.get("app_dialect") or "").strip()
+        profile_dialect = str((profile or {}).get("preferred_dialect") or "").strip()
+
+        properties = event.get("properties")
+        if not isinstance(properties, dict):
+            properties = {}
+
+        deeplink = properties.get("deeplink") or event.get("deeplink")
+        campaign_link = parse_campaign_deeplink(deeplink)
+        campaign_dialect = (
+            str(campaign_link.get("dialect") or "").strip()
+            if campaign_link else ""
+        )
+
+        decision["dialect"]["campaign"] = campaign_dialect or None
+
+        if app_dialect and profile_dialect and app_dialect != profile_dialect:
+            decision["source_conflicts"].append({
+                "field": "dialect",
+                "app_value": app_dialect,
+                "profile_value": profile_dialect,
+                "resolution": "app_dialect_authoritative",
+            })
+
+        if app_dialect and campaign_dialect and app_dialect != campaign_dialect:
+            decision["source_conflicts"].append({
+                "field": "dialect",
+                "app_value": app_dialect,
+                "campaign_value": campaign_dialect,
+                "campaign_id": campaign_link.get("campaign_id"),
+                "deeplink_title_id": campaign_link.get("title_id"),
+                "resolution": "app_dialect_authoritative",
+            })
+
+        decision["dialect"]["used"] = app_dialect or None
+
+        max_trigger_age = max(0, int(os.environ.get("MAX_TRIGGER_AGE_SECONDS", "86400")))
+        age_seconds = trigger_age_seconds(event)
+        decision["trigger_age_s"] = round(age_seconds, 3) if age_seconds is not None else None
+        if age_seconds is not None and age_seconds > max_trigger_age:
+            decision["reason"] = "Stale buffered trigger; no action taken"
+            decision["checks"]["failed"].append("trigger_stale")
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            continue
+
         if profile is None:
             missing_profiles += 1
             decision["reason"] = "No profile available; abstained"
             decision["checks"]["failed"].append("profile_missing")
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             abstentions += 1
             history[user_id].append(event)
@@ -568,6 +646,7 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
             unknown_arms += 1
             decision["reason"] = "No experiment arm; abstained safely"
             decision["checks"]["failed"].append("arm_missing")
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             abstentions += 1
             history[user_id].append(event)
@@ -588,10 +667,16 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
 
             if shadow_goal:
                 decision["goal"] = goal_id(shadow_goal)
+                decision["deadline"] = (
+                    timestamp(now + timedelta(hours=goal_window_hours(shadow_goal)))
+                    if goal_window_hours(shadow_goal) is not None
+                    else None
+                )
                 decision["evidence"] = [
                     "shadow_goal_assignment",
                     *shadow_evidence,
                 ]
+                decision["status"] = "HOLDOUT_SHADOW_GOAL"
                 decision["reason"] = (
                     "Holdout shadow goal assigned; agent actions prohibited"
                 )
@@ -602,9 +687,11 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
                     "Holdout; no eligible measurable shadow goal"
                 )
                 decision["evidence"] = shadow_evidence
+                decision["status"] = "HOLDOUT_NO_GOAL"
 
             decision["checks"]["passed"].append("holdout_isolation")
             decision["checks"]["passed"].append("no_action_created")
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             holdout_decisions += 1
             history[user_id].append(event)
@@ -623,13 +710,22 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
             decision["reason"] = "No eligible measurable goal; abstained"
             decision["evidence"] = evidence
             decision["checks"]["passed"].append("no_unsupported_claims")
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             abstentions += 1
             history[user_id].append(event)
             continue
 
         decision["goal"] = goal_id(selected_goal)
+        window_hours = goal_window_hours(selected_goal)
+        decision["deadline"] = (
+            timestamp(now + timedelta(hours=window_hours))
+            if window_hours is not None and window_hours > 0
+            else None
+        )
         decision["evidence"] = evidence
+        # The current rule engine does not emit explicit assumptions or a
+        # calibrated confidence score. Keep those unknown rather than inventing them.
         active_goals[user_id] = dict(selected_goal)
 
         # Only create an action if a valid dialect and currently available
@@ -654,9 +750,52 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
             decision["checks"]["failed"].append(
                 "no_available_dialect_title"
             )
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             abstentions += 1
             history[user_id].append(event)
+            continue
+
+        # Independently verify the proposed action before publication.
+        # The verifier can reject a plan produced by the decision logic.
+        proposed_title_ids = [
+            title_id
+            for row in action.get("rows", [])
+            for title_id in row.get("title_ids", [])
+        ]
+        verification = verify_action(
+            {
+                "action": "HOME_PAGE",
+                "content": proposed_title_ids,
+                "rows": action.get("rows", []),
+                "dialect": {"used": action.get("dialect")},
+            },
+            arm=arm,
+            trigger_id=str(event.get("event_id", "")),
+            processed_trigger_ids=processed_trigger_ids,
+            now=timestamp(now),
+            available_title_ids={
+                str(title["title_id"])
+                for title in available_titles(
+                    catalogue=catalogue,
+                    dialect=str(event.get("app_dialect") or "").strip(),
+                    now=now,
+                    withdrawn_titles=withdrawn_titles,
+                )
+            },
+            title_dialects=title_dialects,
+            content_slugs=content_slugs,
+        )
+        decision["checks"]["passed"].extend(verification["passed"])
+        decision["checks"]["failed"].extend(verification["failed"])
+        if not verification["approved"]:
+            decision["reason"] = "Independent verifier rejected action"
+            decision["verification_reason"] = verification["reason"]
+            decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
+            decisions.append(decision)
+            abstentions += 1
+            history[user_id].append(event)
+            processed_trigger_ids.add(str(event.get("event_id", "")))
             continue
 
         # Record processing time in published_at as required by the replay
@@ -667,7 +806,10 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
 
         action_number += 1
         actions.append(action)
+        processed_trigger_ids.add(str(event.get("event_id", "")))
         decision["action_ids"].append(action["action_id"])
+        decision["status"] = "ACTION_CREATED"
+        decision["dialect"]["used"] = action.get("dialect")
         decision["reason"] = "Eligible measurable goal; home page action created"
         decision["checks"]["passed"].extend(
             [
@@ -678,6 +820,7 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
                 "holdout_isolation",
             ]
         )
+        decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
         decisions.append(decision)
 
         history[user_id].append(event)
@@ -712,6 +855,8 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
         "notes": [
             "Holdout shadow goals are evaluation metadata, not actions.",
             "No push or WhatsApp messages are generated by this baseline.",
+            "Triggers older than MAX_TRIGGER_AGE_SECONDS (default 86400) are abstained.",
+            "Every generated home-page action passes the independent verifier.",
             "Goal eligibility uses only configured rules and observed evidence.",
             "The simulator remains the source of truth for action acceptance.",
         ],

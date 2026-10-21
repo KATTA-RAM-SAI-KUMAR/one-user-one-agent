@@ -1,9 +1,12 @@
 {
-  "source": "sample_run/replay_report.json",
-  "processing_elapsed_ms": 1897.378,
-  "average_decision_ms": 0.7082,
+  "source": "submission/sample_run/decisions.jsonl",
+  "measurement": "Per-decision replay processing time",
   "decision_count": 2679,
-  "p95_latency_ms": null,
-  "p99_latency_ms": null,
-  "note": "Percentile latency was not recorded by the existing replay report."
+  "average_decision_ms": 0.6918,
+  "min_decision_ms": 0.0074,
+  "max_decision_ms": 9.6747,
+  "p95_latency_ms": 2.2979,
+  "p99_latency_ms": 4.6912,
+  "percentile_method": "Nearest-rank",
+  "note": "Local replay decision-processing latency, not end-to-end production latency."
 }

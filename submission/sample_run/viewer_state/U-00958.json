@@ -2,13 +2,13 @@
   "user_id": "U-00958",
   "decision_count": 7,
   "action_ids": [
-    "A-0130",
-    "A-0429",
-    "A-0502",
-    "A-0517",
-    "A-0752",
-    "A-0976",
-    "A-1084"
+    "A-0121",
+    "A-0366",
+    "A-0435",
+    "A-0448",
+    "A-0669",
+    "A-0885",
+    "A-0990"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",

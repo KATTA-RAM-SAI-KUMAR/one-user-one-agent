@@ -17,7 +17,7 @@
   "latest_decision_id": "D-1844",
   "latest_trigger_event_id": "8acaad3d-f339-4dfa-9005-b8039c3d8223",
   "latest_trigger_type": "app_open",
-  "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
+  "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "holdout",
   "active_goal": null,
   "latest_deliver_at": "2026-10-01T14:27:16.571Z",

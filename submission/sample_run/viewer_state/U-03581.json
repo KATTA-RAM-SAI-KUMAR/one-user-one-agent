@@ -2,14 +2,11 @@
   "user_id": "U-03581",
   "decision_count": 2,
   "action_ids": [
-    "A-0191",
-    "A-1074"
+    "A-0980"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",
-    "success_window_hours:24",
-    "measurable_success_event:episode_completed",
-    "success_window_hours:72"
+    "success_window_hours:24"
   ],
   "processed_trigger_ids": [
     "fe2369f3-f855-432f-ab71-d3d3516b5328",

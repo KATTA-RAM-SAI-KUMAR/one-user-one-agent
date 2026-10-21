@@ -17,7 +17,7 @@
   "latest_decision_id": "D-0500",
   "latest_trigger_event_id": "add5b70f-58dd-4b1b-93c7-ea60b879d51d",
   "latest_trigger_type": "app_open",
-  "latest_reason": "Holdout shadow goal assigned; agent actions prohibited",
+  "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "holdout",
   "active_goal": null,
   "latest_deliver_at": "2026-10-01T04:46:57.745Z",

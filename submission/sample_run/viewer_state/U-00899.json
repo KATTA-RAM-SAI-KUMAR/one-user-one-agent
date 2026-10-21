@@ -2,8 +2,8 @@
   "user_id": "U-00899",
   "decision_count": 2,
   "action_ids": [
-    "A-0968",
-    "A-0969"
+    "A-0877",
+    "A-0878"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",

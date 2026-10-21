@@ -1,22 +1,15 @@
 ﻿# Architecture
 
-## Components
-- `src/data_audit.py`: structural data checks.
-- `src/event_loader.py`: event loading, normalization, and deduplication.
-- `src/goal_planner.py`: evidence-based goal planning.
-- `src/verifier.py`: action verification and safety checks.
-- `src/replay_engine.py`: deterministic replay and decision/action recording.
-- `src/goal_outcome_evaluator.py`: goal outcome attribution.
-- `src/impact_report.py`: preliminary impact summaries.
+## Current implementation
+The project uses Python modules for data auditing, event loading, goal planning, verification, replay, outcome evaluation, and impact reporting.
 
 ## Replay workflow
-1. Audit the supplied data pack.
-2. Load and normalize events and resolve profile snapshots.
-3. Evaluate evidence and decide to act or abstain.
-4. Verify actions, including holdout isolation.
-5. Write decisions, actions, and replay metrics.
-6. Simulate outcomes and produce descriptive reports.
-7. Derive per-viewer snapshots from the recorded decisions and actions.
+1. Audit the input data.
+2. Load and normalize events.
+3. Evaluate available evidence and decide whether to act or abstain.
+4. Verify proposed actions.
+5. Record decisions and actions.
+6. Simulate outcomes and generate reports.
 
-## Per-viewer snapshots
-`sample_run/viewer_state/` contains one JSON snapshot per viewer and an index. Each snapshot links to decision IDs, trigger event IDs, evidence descriptions, and action IDs. These are derived from the completed replay, not a transactional state store used during decision processing.
+## Safety and reliability
+The implementation must be evaluated against the assignment requirements. See KNOWN_LIMITATIONS.md for gaps that still require verification.

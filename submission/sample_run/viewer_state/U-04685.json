@@ -2,12 +2,12 @@
   "user_id": "U-04685",
   "decision_count": 6,
   "action_ids": [
-    "A-0085",
-    "A-0119",
-    "A-0120",
-    "A-0235",
-    "A-0410",
-    "A-0747"
+    "A-0083",
+    "A-0113",
+    "A-0114",
+    "A-0179",
+    "A-0347",
+    "A-0664"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",

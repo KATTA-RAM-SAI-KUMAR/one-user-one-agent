@@ -2,17 +2,14 @@
   "user_id": "U-02580",
   "decision_count": 1,
   "action_ids": [],
-  "evidence_references": [
-    "measurable_success_event:play_started",
-    "success_window_hours:24"
-  ],
+  "evidence_references": [],
   "processed_trigger_ids": [
     "f822f9c4-c9e3-4c7f-ba5d-9d147b9b127f"
   ],
   "latest_decision_id": "D-0502",
   "latest_trigger_event_id": "f822f9c4-c9e3-4c7f-ba5d-9d147b9b127f",
   "latest_trigger_type": "app_open",
-  "latest_reason": "Goal selected, but no valid dialect-specific title; abstained",
+  "latest_reason": "Stale buffered trigger; no action taken",
   "arm": "agent",
   "active_goal": null,
   "latest_deliver_at": "2026-10-01T04:47:02.705Z",

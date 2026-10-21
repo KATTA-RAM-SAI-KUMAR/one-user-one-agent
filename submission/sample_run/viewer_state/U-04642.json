@@ -2,11 +2,11 @@
   "user_id": "U-04642",
   "decision_count": 6,
   "action_ids": [
-    "A-0565",
-    "A-0662",
-    "A-0674",
-    "A-0800",
-    "A-0801"
+    "A-0495",
+    "A-0587",
+    "A-0598",
+    "A-0715",
+    "A-0716"
   ],
   "evidence_references": [
     "measurable_success_event:play_started",
