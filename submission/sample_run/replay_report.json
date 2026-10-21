@@ -14,8 +14,8 @@
   "goal_rule_corrections_seen": 1,
   "missing_profiles": 192,
   "unknown_arms": 0,
-  "processing_elapsed_ms": 2893.459,
-  "average_decision_ms": 1.0801,
+  "processing_elapsed_ms": 3034.788,
+  "average_decision_ms": 1.1328,
   "holdout_actions_created": 0,
   "notes": [
     "Holdout shadow goals are evaluation metadata, not actions.",
