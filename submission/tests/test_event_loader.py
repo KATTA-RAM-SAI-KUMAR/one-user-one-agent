@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.event_loader import load_events, parse_timestamp, resolve_viewer_facts
+from submission.src.event_loader import load_events, parse_timestamp, resolve_viewer_facts
 
 
 class EventLoaderTests(unittest.TestCase):

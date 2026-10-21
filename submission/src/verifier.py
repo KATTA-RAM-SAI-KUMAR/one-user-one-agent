@@ -75,7 +75,7 @@ def verify_action(
         local_now = None
         if now is not None:
             if isinstance(now, str):
-                from src.event_loader import parse_timestamp
+                from submission.src.event_loader import parse_timestamp
                 now = parse_timestamp(now)
             if now is not None:
                 local_now = now.astimezone(IST)

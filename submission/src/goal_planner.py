@@ -5,7 +5,7 @@ import json
 from datetime import timedelta
 from pathlib import Path
 
-from src.event_loader import parse_timestamp
+from submission.src.event_loader import parse_timestamp
 
 
 UNMEASURABLE_GOAL_IDS = {"G10"}

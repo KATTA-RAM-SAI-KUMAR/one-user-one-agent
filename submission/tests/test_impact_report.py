@@ -1,6 +1,6 @@
 import unittest
 
-from src.impact_report import (
+from submission.src.impact_report import (
     wilson_interval,
     newcombe_difference_interval,
 )

@@ -1,8 +1,8 @@
 
 import unittest
 
-from src.goal_planner import plan_goal
-from src.verifier import verify_action
+from submission.src.goal_planner import plan_goal
+from submission.src.verifier import verify_action
 
 
 class PlannerVerifierTests(unittest.TestCase):

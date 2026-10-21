@@ -11,8 +11,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from src.state_store import ViewerStateStore
-from src.verifier import verify_action
+from submission.src.state_store import ViewerStateStore
+from submission.src.verifier import verify_action
 from submission.src.deeplink_parser import parse_campaign_deeplink
 
 

@@ -2,7 +2,7 @@
 import unittest
 from pathlib import Path
 
-from src.state_store import ViewerStateStore
+from submission.src.state_store import ViewerStateStore
 
 
 class ViewerStateStoreTests(unittest.TestCase):
