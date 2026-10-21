@@ -38,5 +38,34 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(_success_event(corrected_goal), "play_started")
 
 
+    def test_trigger_age_uses_received_time_minus_occurred_time(self):
+        from submission.src.replay_engine import trigger_age_seconds
+
+        event = {
+            "received_at": "2026-10-01T10:05:00Z",
+            "occurred_at": "2026-10-01T10:00:00Z",
+        }
+
+        self.assertEqual(trigger_age_seconds(event), 300.0)
+
+    def test_trigger_age_is_unknown_when_timestamp_is_missing(self):
+        from submission.src.replay_engine import trigger_age_seconds
+
+        self.assertIsNone(
+            trigger_age_seconds({"received_at": "2026-10-01T10:05:00Z"})
+        )
+
+    def test_verifier_rejects_a_previously_processed_trigger(self):
+        result = verify_action(
+            {"action": "NONE"},
+            arm="treatment",
+            trigger_id="E-duplicate",
+            processed_trigger_ids={"E-duplicate"},
+        )
+
+        self.assertFalse(result["approved"])
+        self.assertIn("idempotency", result["failed"])
+
+
 if __name__ == "__main__":
     unittest.main()
