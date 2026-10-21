@@ -67,5 +67,38 @@ class ReliabilityTests(unittest.TestCase):
         self.assertIn("idempotency", result["failed"])
 
 
+    def test_unknown_trigger_age_is_rejected(self):
+        from submission.src.replay_engine import trigger_age_rejection_reason
+
+        event = {"received_at": "2026-10-01T10:05:00Z"}
+        self.assertEqual(
+            trigger_age_rejection_reason(event, 86400),
+            "trigger_age_unknown",
+        )
+
+    def test_trigger_over_age_limit_is_rejected(self):
+        from submission.src.replay_engine import trigger_age_rejection_reason
+
+        event = {
+            "received_at": "2026-10-02T10:00:01Z",
+            "occurred_at": "2026-10-01T10:00:00Z",
+        }
+        self.assertEqual(
+            trigger_age_rejection_reason(event, 86400),
+            "trigger_stale",
+        )
+
+    def test_trigger_at_age_limit_is_accepted(self):
+        from submission.src.replay_engine import trigger_age_rejection_reason
+
+        event = {
+            "received_at": "2026-10-02T10:00:00Z",
+            "occurred_at": "2026-10-01T10:00:00Z",
+        }
+        self.assertIsNone(
+            trigger_age_rejection_reason(event, 86400)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

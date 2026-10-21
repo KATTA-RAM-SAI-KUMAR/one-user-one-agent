@@ -93,6 +93,18 @@ def trigger_age_seconds(event: dict[str, Any]) -> float | None:
         return None
     return max(0.0, (received - occurred).total_seconds())
 
+
+def trigger_age_rejection_reason(
+    event: dict[str, Any], max_age_seconds: int
+) -> str | None:
+    """Fail closed when trigger age is unknown or exceeds the configured limit."""
+    age_seconds = trigger_age_seconds(event)
+    if age_seconds is None:
+        return "trigger_age_unknown"
+    if age_seconds > max(0, max_age_seconds):
+        return "trigger_stale"
+    return None
+
 def timestamp(value: datetime) -> str:
     return value.astimezone(UTC).isoformat(timespec="milliseconds").replace(
         "+00:00", "Z"
@@ -623,9 +635,13 @@ def run_replay(pack: Path, out: Path) -> dict[str, Any]:
         max_trigger_age = max(0, int(os.environ.get("MAX_TRIGGER_AGE_SECONDS", "86400")))
         age_seconds = trigger_age_seconds(event)
         decision["trigger_age_s"] = round(age_seconds, 3) if age_seconds is not None else None
-        if age_seconds is not None and age_seconds > max_trigger_age:
-            decision["reason"] = "Stale buffered trigger; no action taken"
-            decision["checks"]["failed"].append("trigger_stale")
+        age_rejection = trigger_age_rejection_reason(event, max_trigger_age)
+        if age_rejection is not None:
+            if age_rejection == "trigger_age_unknown":
+                decision["reason"] = "Trigger age could not be verified; no action taken"
+            else:
+                decision["reason"] = "Stale buffered trigger; no action taken"
+            decision["checks"]["failed"].append(age_rejection)
             decision["decided_in_ms"] = round((time.perf_counter() - decision_started) * 1000, 4)
             decisions.append(decision)
             abstentions += 1
